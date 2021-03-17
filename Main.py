@@ -90,7 +90,7 @@ if __name__ == "__main__":
     print(args)
 
     param = {}
-    param['n_epochs'] = 400
+    param['n_epochs'] = 30
     param['device'] = torch.device("cuda")
     param['embed_dim'] = args.embed_dim
     if args.semi_supervised:
@@ -121,8 +121,8 @@ if __name__ == "__main__":
 
     # Keep track of the best results
     best_score = 0.0
-    key = hash_param(param)
-    early_stopping = EarlyStopping(patience_max=30)
+
+    early_stopping = EarlyStopping(patience_max=10)
 
     for epoch in range(param['n_epochs']):
         print("---- Epoch {} out of {} ----".format(epoch+1, param['n_epochs']))
@@ -137,21 +137,14 @@ if __name__ == "__main__":
 
         # Evaluation
         model.eval()
-        res = evaluate_model_watershed(model, base_dataset, valid=True, **param)
+        res = evaluate_model_watershed(model, base_dataset, valid=False, **param)
+        res_map = mean_average_precision(model, base_dataset, valid=False, **param)
         print('Train OA: {: 0.4f} AA: {: 0.4f} Kappa: {: 0.4f}'.format(res[0], res[1], res[2]))
         print('Valid OA: {: 0.4f} AA: {: 0.4f} Kappa: {: 0.4f}'.format(res[3], res[4], res[5]))
 
-        if best_score < res[3]:
-            best_score = res[3]
-            torch.save(model.state_dict(), "./dump/weights_model_"+str(key)+".pth")
-
-        early_stopping.update(res[3])
-        if early_stopping.stop:
-            print("Early Stopping....")
-            break
-
-    # Print the final Evaluation Metrics
-    model.load_state_dict(torch.load("./dump/weights_model_"+str(key)+".pth"))
+    # Save the model and Print Final EValuation Metric
+    key = hash_param(param)
+    torch.save(model.state_dict(), "./dump/weights_model_"+str(key)+".pth")
     res = evaluate_model_watershed(model, base_dataset, valid=False, **param)
     res_map = mean_average_precision(model, base_dataset, valid=False, **param)
     print("-------------------------------------------------------------")
