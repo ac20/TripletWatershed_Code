@@ -138,7 +138,7 @@ def _induced_edges(traindata, indexes):
     return uedge, vedge
 
 
-def evaluate_model_watershed(model, traindata, valid=True, **param):
+def evaluate_model_watershed(model, traindata, **param):
     """
     """
     ind_original = np.concatenate((traindata.train_idx, traindata.test_idx))
@@ -182,11 +182,6 @@ def evaluate_model_watershed(model, traindata, valid=True, **param):
         weight += weighttmp
         # print("\r{} out of {} done...".format(rep+1, 20), end="")
     prob = prob/weight
-
-    if valid:
-        np.random.seed(param['seed']+10)
-        indtest_valid, _ = _split_seeds_train(indtest, labels, percent_seeds=0.2)
-        indtest = indtest_valid
 
     OA_train, OA_test = _compute_OA(prob, labels, indtrain, indtest)
     AA_train, AA_test = _compute_AA(prob, labels, indtrain, indtest)
@@ -238,11 +233,6 @@ def evaluate_model_watershed_classwise(model, traindata, valid=True, **param):
         weight += weighttmp
         # print("\r{} out of {} done...".format(rep+1, 20), end="")
     prob = prob/weight
-
-    if valid:
-        np.random.seed(param['seed']+10)
-        indtest_valid, _ = _split_seeds_train(indtest, labels, percent_seeds=0.2)
-        indtest = indtest_valid
 
     acc_train, acc_test = _compute_accuracy_classwise(prob, labels, indtrain, indtest)
     OA_train, OA_test = _compute_OA(prob, labels, indtrain, indtest)
@@ -299,7 +289,7 @@ def evaluate_ensemble_watershed(traindata, Xrep, labels, train_indices, test_ind
     return OA_train, AA_train, kappa_train, acc_train, OA_test, AA_test, kappa_test, acc_test
 
 
-def evaluate_rf_clf(model, traindata, valid=True, **param):
+def evaluate_rf_clf(model, traindata, **param):
     """
     """
     ind_original = np.concatenate((traindata.train_idx, traindata.test_idx))
@@ -312,18 +302,13 @@ def evaluate_rf_clf(model, traindata, valid=True, **param):
     clf.fit(Xrep[indtrain], labels[indtrain])
     prob = clf.predict_proba(Xrep)
 
-    if valid:
-        np.random.seed(param['seed']+10)
-        indtest_valid, _ = _split_seeds_train(indtest, labels, percent_seeds=0.2)
-        indtest = indtest_valid
-
     OA_train, OA_test = _compute_OA(prob, labels, indtrain, indtest)
     AA_train, AA_test = _compute_AA(prob, labels, indtrain, indtest)
     kappa_train, kappa_test = _compute_kappa(prob, labels, indtrain, indtest)
     return OA_train, AA_train, kappa_train, OA_test, AA_test, kappa_test
 
 
-def evaluate_knn_clf(model, traindata, valid=True, **param):
+def evaluate_knn_clf(model, traindata, **param):
     """
     """
     ind_original = np.concatenate((traindata.train_idx, traindata.test_idx))
@@ -336,18 +321,13 @@ def evaluate_knn_clf(model, traindata, valid=True, **param):
     clf.fit(Xrep[indtrain], labels[indtrain])
     prob = clf.predict_proba(Xrep)
 
-    if valid:
-        np.random.seed(param['seed']+10)
-        indtest_valid, _ = _split_seeds_train(indtest, labels, percent_seeds=0.2)
-        indtest = indtest_valid
-
     OA_train, OA_test = _compute_OA(prob, labels, indtrain, indtest)
     AA_train, AA_test = _compute_AA(prob, labels, indtrain, indtest)
     kappa_train, kappa_test = _compute_kappa(prob, labels, indtrain, indtest)
     return OA_train, AA_train, kappa_train, OA_test, AA_test, kappa_test
 
 
-def mean_average_precision(model, traindata, valid=True, **param):
+def mean_average_precision(model, traindata, **param):
     """
     """
     ind_original = np.concatenate((traindata.train_idx, traindata.test_idx))

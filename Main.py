@@ -6,9 +6,6 @@ golbablize the watershed first and then train the neural network.
 import numpy as np
 import pdb
 
-from sklearn.svm import LinearSVC
-from sklearn.linear_model import LogisticRegression
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +20,7 @@ from utils import AverageMeter, hash_param, EarlyStopping
 from Evaluate import evaluate_model_watershed, mean_average_precision
 
 import argparse
+from tqdm import tqdm
 
 
 class tripletDataset(Dataset):
@@ -58,7 +56,8 @@ def train_all_layers(model, dataset_input, optimizer, scheduler, **param):
     loss_fn = nn.TripletMarginLoss(reduction='mean')
     optimizer.zero_grad()
     track_loss = AverageMeter('loss')
-    for batch_no, (Xanc, Xpos, Xneg) in enumerate(dataloader):
+    tqdm_tot = len(dataloader)
+    for batch_no, (Xanc, Xpos, Xneg) in tqdm(enumerate(dataloader), total=tqdm_tot):
         Xanc = Xanc.to(param['device'])
         Xpos = Xpos.to(param['device'])
         Xneg = Xneg.to(param['device'])
@@ -90,7 +89,7 @@ if __name__ == "__main__":
     print(args)
 
     param = {}
-    param['n_epochs'] = 30
+    param['n_epochs'] = 15
     param['device'] = torch.device("cuda")
     param['embed_dim'] = args.embed_dim
     if args.semi_supervised:
@@ -122,10 +121,7 @@ if __name__ == "__main__":
     # Keep track of the best results
     best_score = 0.0
 
-    early_stopping = EarlyStopping(patience_max=10)
-
     for epoch in range(param['n_epochs']):
-        print("---- Epoch {} out of {} ----".format(epoch+1, param['n_epochs']))
         model.eval()
         new_labels, watershed_acc = get_watershed_labels(model, base_dataset, **param)
         watershed_dataset.update_watershed_labels(new_labels)
@@ -133,20 +129,13 @@ if __name__ == "__main__":
         # Train the network using the watershed labels and triplet loss
         model.train()
         loss = train_all_layers(model, watershed_dataset, optimizer, scheduler, **param)
-        print("Training Loss : {:0.4f}".format(loss))
-
-        # Evaluation
-        model.eval()
-        res = evaluate_model_watershed(model, base_dataset, valid=False, **param)
-        res_map = mean_average_precision(model, base_dataset, valid=False, **param)
-        print('Train OA: {: 0.4f} AA: {: 0.4f} Kappa: {: 0.4f}'.format(res[0], res[1], res[2]))
-        print('Valid OA: {: 0.4f} AA: {: 0.4f} Kappa: {: 0.4f}'.format(res[3], res[4], res[5]))
+        print("-- Epoch {:02d} out of {:02d} -- Training Loss : {:0.4f}".format(epoch+1, param['n_epochs'], loss))
 
     # Save the model and Print Final EValuation Metric
     key = hash_param(param)
     torch.save(model.state_dict(), "./dump/weights_model_"+str(key)+".pth")
-    res = evaluate_model_watershed(model, base_dataset, valid=False, **param)
-    res_map = mean_average_precision(model, base_dataset, valid=False, **param)
+    res = evaluate_model_watershed(model, base_dataset, **param)
+    res_map = mean_average_precision(model, base_dataset, **param)
     print("-------------------------------------------------------------")
     print("-------------------------- RESULTS --------------------------")
     print("-------------------------------------------------------------")
