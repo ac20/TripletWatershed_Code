@@ -10,9 +10,15 @@ import wget
 import scipy as sp
 from scipy.io import loadmat
 
+from osgeo import gdal
+import osgeo.gdalnumeric as gdn
+
 from sklearn.decomposition import PCA
 from sklearn import metrics, preprocessing
+from sklearn.neighbors import kneighbors_graph
+from sklearn.random_projection import GaussianRandomProjection
 from mlpack import emst
+
 
 import torch
 import torch.nn as nn
@@ -45,6 +51,24 @@ def get_emst_edges(img, labels):
     return uedge, vedge
 
 
+def get_knn_edges(img, labels):
+    s0, s1, _ = np.shape(img)
+    X = img.reshape((s0*s1, -1))
+    Xpca = PCA(n_components=32).fit_transform(X)
+    indselect = np.where(labels != 0)[0]
+
+    graph = kneighbors_graph(Xpca[indselect], n_neighbors=50)
+    graph = graph + graph.transpose()
+    u, v, w = sp.sparse.find(graph)
+    uedge = np.array(u, dtype=np.int64)
+    vedge = np.array(v, dtype=np.int64)
+    indfilter = uedge < vedge
+    uedge, vedge = uedge[indfilter], vedge[indfilter]
+
+    uedge, vedge = indselect[uedge], indselect[vedge]
+    return uedge, vedge
+
+
 def get_4adj_edges(img, labels):
     """
     """
@@ -58,7 +82,7 @@ def get_4adj_edges(img, labels):
     return uedge, vedge
 
 
-def get_edges_4adjEMST(img, labels):
+def get_edges_4adjEMST(img, labels, **param):
     """These edges are constructed by ignoring {labels==0} points and adding the Euclidean
     Minimum Spanning Tree of all the {labels!=0} points.
 
@@ -70,7 +94,10 @@ def get_edges_4adjEMST(img, labels):
     u1, v1 = get_4adj_edges(img, labels)
 
     # Add EMST edges for all points with label != 0
-    u2, v2 = get_emst_edges(img, labels)
+    if param['dataset'] == 'houston':
+        u2, v2 = get_knn_edges(img, labels)
+    else:
+        u2, v2 = get_emst_edges(img, labels)
 
     # Combine both EMST and 4adj edges
     uedge = np.concatenate((u1, u2))
@@ -152,10 +179,10 @@ def get_paviaU_data(root="./data", download=True):
     data = loadmat("./data/PaviaU.mat")
     X = np.array(data['paviaU'], dtype=np.float32)
 
-    # Normalize
-    muX = np.mean(X, axis=(0, 1), keepdims=True)
-    stdX = np.std(X, axis=(0, 1), keepdims=True) + 1e-6
-    X = (X - muX)/stdX
+    # # Normalize
+    # muX = np.mean(X, axis=(0, 1), keepdims=True)
+    # stdX = np.std(X, axis=(0, 1), keepdims=True) + 1e-6
+    # X = (X - muX)/stdX
 
     data = loadmat("./data/PaviaU_gt.mat")
     y = np.array(data['paviaU_gt'], dtype=np.int32)
@@ -177,13 +204,60 @@ def get_ksc_data(root="./data", download=True):
     data = loadmat("./data/KSC.mat")
     X = np.array(data['KSC'], dtype=np.float32)
 
-    # Normalize
-    muX = np.mean(X, axis=(0, 1), keepdims=True)
-    stdX = np.std(X, axis=(0, 1), keepdims=True) + 1e-6
-    X = (X - muX)/stdX
+    # # Normalize
+    # muX = np.mean(X, axis=(0, 1), keepdims=True)
+    # stdX = np.std(X, axis=(0, 1), keepdims=True) + 1e-6
+    # X = (X - muX)/stdX
 
     data = loadmat("./data/KSC_gt.mat")
     y = np.array(data['KSC_gt'], dtype=np.int32)
+    return X, y
+
+
+def get_houston_data(root="./data", download=False):
+    """ 
+    ** Links for houston dataset are not working as on April 27, 2021.
+    Please download the files manually from
+    http://hyperspectral.ee.uh.edu/2egf4tg8hial13gt/2013_DFTC.zip
+    and unzip them.
+    """
+
+    data = loadmat("./data/houston.mat")
+    X = np.array(data['houston'], dtype=np.float32)
+
+    # Normalize
+    # muX = np.mean(X, axis=(0, 1), keepdims=True)
+    # stdX = np.std(X, axis=(0, 1), keepdims=True) + 1e-6
+    # X = (X - muX)/stdX
+
+    data = loadmat("./data/houston_gt.mat")
+    y1 = np.array(data['houston_gt_tr'], dtype=np.int32)
+    y2 = np.array(data['houston_gt_te'], dtype=np.int32)
+    y2[y1 > 0] = y1[y1 > 0]
+    y = np.array(y2, dtype=np.int32)
+    return X, y
+
+
+def img_to_array(input_file, dim_ordering="channels_last", dtype='float32'):
+    file = gdal.Open(input_file)
+    bands = [file.GetRasterBand(i) for i in range(1, file.RasterCount + 1)]
+    arr = np.array([gdn.BandReadAsArray(band) for band in bands]).astype(dtype)
+    if dim_ordering == "channels_last":
+        arr = np.transpose(arr, [1, 2, 0])  # Reorders dimensions, so that channels are last
+    return arr
+
+
+def get_houston2018_data(root="./data/", download=False):
+    """
+    ** Links for houston dataset are not working as on April 27, 2021.
+    Please download the files manually from
+    https://hyperspectral.ee.uh.edu/?page_id=1075
+    """
+    fname = "./data/2018IEEE_Contest/Phase2/FullHSIDataset/20170218_UH_CASI_S4_NAD83.pix"
+    X = img_to_array(fname)
+
+    raster = gdal.Open("./data/2018IEEE_Contest/Phase2/TrainingGT/2018_IEEE_GRSS_DFC_GT_TR.tif")
+    y = np.array(raster.GetRasterBand(1).ReadAsArray(), dtype=np.int32)
     return X, y
 
 
@@ -198,7 +272,7 @@ class Hyperspectral_Dataset(Dataset):
     def __init__(self, root="./data", download=True, **param):
 
         # Set the patch_size
-        self.patch_size = 5
+        self.patch_size = param['patch_size']
 
         # Get the data
         if param['dataset'] == 'indianpines':
@@ -207,8 +281,12 @@ class Hyperspectral_Dataset(Dataset):
             self.X, self.y = get_paviaU_data(root, download)
         if param['dataset'] == 'ksc':
             self.X, self.y = get_ksc_data(root, download)
+        if param['dataset'] == 'houston':
+            self.X, self.y = get_houston_data(root, download)
+        if param['dataset'] == 'houston2018':
+            self.X, self.y = get_houston2018_data(root, download)
 
-        self.uedge, self.vedge = get_edges_4adjEMST(self.X, self.y.flatten())
+        self.uedge, self.vedge = get_edges_4adjEMST(self.X, self.y.flatten(), **param)
 
         # transform X,y using PCA
         self.sx, self.sy, self.sz = np.shape(self.X)

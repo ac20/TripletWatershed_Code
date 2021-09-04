@@ -5,6 +5,7 @@ golbablize the watershed first and then train the neural network.
 
 import numpy as np
 import pdb
+import time
 
 import torch
 import torch.nn as nn
@@ -80,16 +81,17 @@ def train_all_layers(model, dataset_input, optimizer, scheduler, **param):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", help="Dataset to work on", choices=['indianpines', 'paviaU', 'ksc'], default='indianpines')
+    parser.add_argument("--dataset", help="Dataset to work on", choices=['indianpines', 'paviaU', 'ksc', 'houston'], default='indianpines')
     parser.add_argument("--seed", type=int, help="Set the seed for train/test split of dataset", default=42)
     parser.add_argument("--train_size", type=float, help="Train Size", default=0.1)
     parser.add_argument("--embed_dim", type=int, help="Embedding Dimension", default=64)
+    parser.add_argument("--patch_size", type=int, help="Patch size", default=5)
     parser.add_argument("--semi_supervised", help="To use semi-supervised split", action="store_true")
     args = parser.parse_args()
     print(args)
 
     param = {}
-    param['n_epochs'] = 15
+    param['n_epochs'] = 20
     param['device'] = torch.device("cuda")
     param['embed_dim'] = args.embed_dim
     if args.semi_supervised:
@@ -98,6 +100,7 @@ if __name__ == "__main__":
     param['dataset'] = args.dataset
     param['seed'] = args.seed
     param['train_size'] = args.train_size
+    param['patch_size'] = args.patch_size
 
     base_dataset = Hyperspectral_Dataset(**param)
     watershed_dataset = watershed_augment_dataset(base_dataset, **param)
@@ -121,6 +124,7 @@ if __name__ == "__main__":
     # Keep track of the best results
     best_score = 0.0
 
+    train_tic = time.time()
     for epoch in range(param['n_epochs']):
         model.eval()
         new_labels, watershed_acc = get_watershed_labels(model, base_dataset, **param)
@@ -131,11 +135,18 @@ if __name__ == "__main__":
         loss = train_all_layers(model, watershed_dataset, optimizer, scheduler, **param)
         print("-- Epoch {:02d} out of {:02d} -- Training Loss : {:0.4f}".format(epoch+1, param['n_epochs'], loss))
 
-    # Save the model and Print Final EValuation Metric
+    train_time = time.time() - train_tic
+
+    # Save the model and Print Final Evaluation Metric
+    test_tic = time.time()
+    model.eval()
     key = hash_param(param)
     torch.save(model.state_dict(), "./dump/weights_model_"+str(key)+".pth")
-    res = evaluate_model_watershed(model, base_dataset, **param)
+    res = evaluate_model_watershed(model, base_dataset, fname="./dump/"+str(args.dataset)+"_"+str(key)+".png", **param)
+    test_time = time.time() - test_tic
+
     res_map = mean_average_precision(model, base_dataset, **param)
+
     print("-------------------------------------------------------------")
     print("-------------------------- RESULTS --------------------------")
     print("-------------------------------------------------------------")
@@ -143,3 +154,14 @@ if __name__ == "__main__":
     print(' Test OA: {: 0.4f} AA: {: 0.4f} Kappa: {: 0.4f}'.format(res[3], res[4], res[5]))
     print("-------------------------------------------------------------")
     print("Mean Average Precision : {:0.4f}".format(res_map))
+
+    with open("./dump/results_"+str(key)+".txt", "w") as f:
+        f.write("Train    OA : {} \n".format(res[0]))
+        f.write("Train    AA : {} \n".format(res[1]))
+        f.write("Train Kappa : {} \n".format(res[2]))
+        f.write("Test     OA : {} \n".format(res[3]))
+        f.write("Test     AA : {} \n".format(res[4]))
+        f.write("Test  Kappa : {} \n".format(res[5]))
+        f.write("        MAP : {} \n".format(res_map))
+        f.write(" Train time : {} \n".format(train_time))
+        f.write("  Test time : {} \n".format(test_time))

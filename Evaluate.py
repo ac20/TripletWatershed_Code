@@ -5,6 +5,7 @@ Evaluation Module. We estimate three metrics - OA, AA, and kappa using the water
 import numpy as np
 import pdb
 import pickle
+from matplotlib import pyplot as plt
 
 import torch
 import torch.nn.functional as F
@@ -138,7 +139,75 @@ def _induced_edges(traindata, indexes):
     return uedge, vedge
 
 
-def evaluate_model_watershed(model, traindata, **param):
+def list_to_colormap(x_list):
+    y = np.zeros((x_list.shape[0], 3))
+    for index, item in enumerate(x_list):
+        if item == 0:
+            y[index] = np.array([255, 0, 0]) / 255.
+        if item == 1:
+            y[index] = np.array([0, 255, 0]) / 255.
+        if item == 2:
+            y[index] = np.array([0, 0, 255]) / 255.
+        if item == 3:
+            y[index] = np.array([255, 255, 0]) / 255.
+        if item == 4:
+            y[index] = np.array([0, 255, 255]) / 255.
+        if item == 5:
+            y[index] = np.array([255, 0, 255]) / 255.
+        if item == 6:
+            y[index] = np.array([192, 192, 192]) / 255.
+        if item == 7:
+            y[index] = np.array([128, 128, 128]) / 255.
+        if item == 8:
+            y[index] = np.array([128, 0, 0]) / 255.
+        if item == 9:
+            y[index] = np.array([128, 128, 0]) / 255.
+        if item == 10:
+            y[index] = np.array([0, 128, 0]) / 255.
+        if item == 11:
+            y[index] = np.array([128, 0, 128]) / 255.
+        if item == 12:
+            y[index] = np.array([0, 128, 128]) / 255.
+        if item == 13:
+            y[index] = np.array([0, 0, 128]) / 255.
+        if item == 14:
+            y[index] = np.array([255, 165, 0]) / 255.
+        if item == 15:
+            y[index] = np.array([255, 215, 0]) / 255.
+        if item == 16:
+            y[index] = np.array([0, 0, 0]) / 255.
+        if item == 17:
+            y[index] = np.array([215, 255, 0]) / 255.
+        if item == 18:
+            y[index] = np.array([0, 255, 215]) / 255.
+        if item == 19:
+            y[index] = np.array([0, 0, 0]) / 255.
+    return y
+
+
+def _plot_image(traindata, prob, fname):
+    """
+    """
+    predlabels = np.argmax(prob, axis=1)+1
+    indtrain, indtest = traindata.train_idx, traindata.test_idx
+    idx_indtrain = np.arange(len(traindata.train_idx))
+    idx_indtest = len(indtrain) + np.arange(len(traindata.test_idx))
+
+    sx, sy, sz = traindata.sx, traindata.sy, traindata.sz
+    img = np.zeros((sx, sy), dtype=np.int32)
+    img = img.flatten()
+    img[indtrain] = predlabels[idx_indtrain]
+    img[indtest] = predlabels[idx_indtest]
+    img = img.reshape((sx, sy))
+
+    cmap_arr = np.array(list_to_colormap(np.arange(20)))
+    img[img == 0] = 17
+    img = img-1
+
+    plt.imsave(fname, cmap_arr[img])
+
+
+def evaluate_model_watershed(model, traindata, fname=None, return_labels=False, **param):
     """
     """
     ind_original = np.concatenate((traindata.train_idx, traindata.test_idx))
@@ -182,6 +251,13 @@ def evaluate_model_watershed(model, traindata, **param):
         weight += weighttmp
         # print("\r{} out of {} done...".format(rep+1, 20), end="")
     prob = prob/weight
+
+    if fname is not None:
+        _plot_image(traindata, prob, fname)
+
+    if return_labels:
+        predlabels = np.argmax(prob, axis=1)+1
+        return predlabels
 
     OA_train, OA_test = _compute_OA(prob, labels, indtrain, indtest)
     AA_train, AA_test = _compute_AA(prob, labels, indtrain, indtest)

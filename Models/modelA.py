@@ -16,7 +16,7 @@ class modelA(nn.Module):
         self.number_features = param['number_features']
         self.embed_dim = param['embed_dim']
         self.number_labels = param['number_labels']
-        self.patch_size = 5
+        self.patch_size = param['patch_size']
 
         self.bn1 = nn.BatchNorm2d(self.number_features)
         self.conv1 = nn.Conv2d(self.number_features, 64, kernel_size=1, stride=1, bias=False)
