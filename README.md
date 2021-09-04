@@ -37,7 +37,7 @@ optional arguments:
   --semi_supervised     To use semi-supervised split or not. Default:False
 ```
 
-Simple example to train on IndianPines dataset.
+Simple example to train on [Indian Pines](http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat) dataset.
 
 ```
 python Main.py --dataset indianpines --seed 42
@@ -63,7 +63,7 @@ Results acheived on using 10% of the data for training. See tables II - V in the
 
 | Dataset       | OA  | AA | Kappa|
 | ------------------ |---------------- | ---------------- | ---------------- | 
-| [India Pines](http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat)   | 99.57 ± 0.0026 | 99.62 ± 0.0029 | 0.9951 ± 0.0030 |
+| [Indian Pines](http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat)   | 99.57 ± 0.0026 | 99.62 ± 0.0029 | 0.9951 ± 0.0030 |
 | [University of Pavia](http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat)   | 99.98 ± 0.001 | 99.97 ± 0.001 | 0.9998 ± 0.001 |
 | [Kennedy Space Center](http://www.ehu.es/ccwintco/uploads/2/26/KSC.mat)   | 99.72 ± 0.0023 | 99.62 ± 0.0032 | 0.9969 ± 0.0026 |
 | [University of Houston](http://hyperspectral.ee.uh.edu/2egf4tg8hial13gt/2013_DFTC.zip)   | 99.25 ± 0.0039 | 99.32 ± 0.0031 | 0.9919 ± 0.0042 |
@@ -72,7 +72,7 @@ Results using Semi-Supervised split - 30 training points per class. See tables V
 
 | Dataset       | OA  | AA | Kappa|
 | ------------------ |---------------- | ---------------- | ---------------- | 
-| [India Pines](http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat)    | 96.74 ± 0.0194 | 98.53 ± 0.0098 | 0.9627 ± 0.0221 |
+| [Indian Pines](http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat)    | 96.74 ± 0.0194 | 98.53 ± 0.0098 | 0.9627 ± 0.0221 |
 | [University of Pavia](http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat)   | 99.20 ± 0.0129 | 98.95 ± 0.0165 | 0.9894 ± 0.0170 |
 
 
