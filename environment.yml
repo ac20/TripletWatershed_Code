@@ -266,4 +266,4 @@ dependencies:
     - gdal==2.4.2
     - higra==0.6.4
     - wget==3.2
-prefix: /home/adityachalla/anaconda3/envs/pytorch
+prefix: ~/anaconda3/envs/pytorch
