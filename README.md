@@ -76,6 +76,14 @@ Results using Semi-Supervised split - 30 training points per class. See tables V
 | [University of Pavia](http://www.ehu.eus/ccwintco/uploads/e/ee/PaviaU.mat)   | 99.20 ± 0.0129 | 98.95 ± 0.0165 | 0.9894 ± 0.0170 |
 
 
+**Remark 1 :** To run in the semi-supervised mode use (for example above)
+
+```
+python Main.py --dataset indianpines --seed 42 --semi_supervised
+```
+
+**Remark 2 :** In the following images - the bright patches indicate the differences of the Triplet Watershed results with the ground-truth.
+
 ### Indian Pines
 
 |Ground Truth |Triplet-Watershed Result|
